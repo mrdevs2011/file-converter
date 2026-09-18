@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data>
+  <row>
+    <ism>Ali</ism>
+    <sinf>8</sinf>
+    <ball>95</ball>
+  </row>
+  <row>
+    <ism>Madina</ism>
+    <sinf>8</sinf>
+    <ball>91</ball>
+  </row>
+  <row>
+    <ism>Javohir</ism>
+    <sinf>9</sinf>
+    <ball>88</ball>
+  </row>
+</data>

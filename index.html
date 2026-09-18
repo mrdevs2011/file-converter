@@ -2,40 +2,75 @@
 <html lang="uz">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e24a3b">
   <title>File Converter</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="page">
-    <div class="frame">
-      <div class="upload" id="drop" tabindex="0">
-        <h2>Upload files</h2>
-        <p>Drag drop your file</p>
-        <div class="ctrl">CTRL V</div>
-        <small id="fileName"></small>
+    <header class="top">
+      <div class="logo">
+        <span class="logo-mark">⇄</span>
+        <div>
+          <h1>File Converter</h1>
+          <p class="tag">JSON · Excel · CSV · YAML · XML · Markdown</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="frame">
+      <div class="upload" id="drop" tabindex="0" role="button" aria-label="Fayl yuklash">
+        <div class="upload-icon" aria-hidden="true">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4M12 4l-4 4M12 4l4 4"/>
+            <path d="M4 14v4a2 2 0 002 2h12a2 2 0 002-2v-4"/>
+          </svg>
+        </div>
+        <h2>Faylni shu yerga tashlang</h2>
+        <p>yoki bosing · <kbd>Ctrl</kbd>+<kbd>V</kbd></p>
+        <div class="chips" id="fileChips"></div>
+        <small id="fileName" class="sr-only"></small>
       </div>
       <input id="file" type="file" multiple accept=".json,.jsonl,.ndjson,.csv,.tsv,.txt,.xlsx,.xls,.xlsm,.xlsb,.ods,.yaml,.yml,.xml,.html,.htm,.md,.markdown">
+
       <div class="work">
         <div class="actions">
-          <select id="fmt" aria-label="Output format">
-            <option value="xlsx">Excel (XLSX)</option>
-            <option value="ods">ODS</option>
-            <option value="csv">CSV</option>
-            <option value="tsv">TSV</option>
-            <option value="json">JSON</option>
-            <option value="jsonl">JSONL</option>
-            <option value="yaml">YAML</option>
-            <option value="xml">XML</option>
-            <option value="html">HTML</option>
-            <option value="md">Markdown</option>
-          </select>
-          <button class="go" id="go" disabled>Convert</button>
+          <div class="field">
+            <label for="fmt">Chiqish formati</label>
+            <select id="fmt" aria-label="Output format">
+              <option value="xlsx">Excel (XLSX)</option>
+              <option value="ods">ODS</option>
+              <option value="csv">CSV</option>
+              <option value="tsv">TSV</option>
+              <option value="json">JSON</option>
+              <option value="jsonl">JSONL</option>
+              <option value="yaml">YAML</option>
+              <option value="xml">XML</option>
+              <option value="html">HTML</option>
+              <option value="md">Markdown</option>
+            </select>
+          </div>
+          <button class="go" id="go" disabled>
+            <span class="go-text">Convert</span>
+            <span class="go-spin" aria-hidden="true"></span>
+          </button>
         </div>
-        <div class="result" id="result"></div>
+
+        <div class="result" id="result" aria-live="polite">
+          <div class="empty-hint">
+            <p>Convert qilingandan keyin preview shu yerda chiqadi</p>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
+
+    <footer class="foot">
+      <span>Offline · kutubxonalar local</span>
+      <span>Bir nechta fayl birga merge bo‘ladi</span>
+    </footer>
   </div>
+
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/papaparse.min.js"></script>
   <script src="vendor/js-yaml.min.js"></script>
