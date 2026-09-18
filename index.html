@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>File Converter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page">
+    <div class="frame">
+      <div class="upload" id="drop" tabindex="0">
+        <h2>Upload files</h2>
+        <p>Drag drop your file</p>
+        <div class="ctrl">CTRL V</div>
+        <small id="fileName"></small>
+      </div>
+      <input id="file" type="file" multiple accept=".json,.jsonl,.ndjson,.csv,.tsv,.txt,.xlsx,.xls,.xlsm,.xlsb,.ods,.yaml,.yml,.xml,.html,.htm,.md,.markdown">
+      <div class="work">
+        <div class="actions">
+          <select id="fmt" aria-label="Output format">
+            <option value="xlsx">Excel (XLSX)</option>
+            <option value="ods">ODS</option>
+            <option value="csv">CSV</option>
+            <option value="tsv">TSV</option>
+            <option value="json">JSON</option>
+            <option value="jsonl">JSONL</option>
+            <option value="yaml">YAML</option>
+            <option value="xml">XML</option>
+            <option value="html">HTML</option>
+            <option value="md">Markdown</option>
+          </select>
+          <button class="go" id="go" disabled>Convert</button>
+        </div>
+        <div class="result" id="result"></div>
+      </div>
+    </div>
+  </div>
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="vendor/papaparse.min.js"></script>
+  <script src="vendor/js-yaml.min.js"></script>
+  <script src="converter.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

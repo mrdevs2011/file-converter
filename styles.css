@@ -1,0 +1,112 @@
+/* File converter UI */
+:root {
+  --line: #e24a3b;
+  --ink: #c0392b;
+  --muted: #d46a60;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #fff;
+  color: var(--ink);
+  font-family: "Comic Sans MS", "Segoe UI", sans-serif;
+}
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.frame {
+  width: min(980px, 100%);
+  border: 3px solid var(--line);
+  padding: 28px 32px 36px;
+  background: #fff;
+}
+.upload {
+  width: min(560px, 100%);
+  margin: 8px auto 28px;
+  border: 3px solid var(--line);
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  padding: 18px;
+}
+.upload.over { background: #fff5f4; }
+.upload h2 { margin: 0; font-size: 28px; font-weight: 500; }
+.upload p { margin: 8px 0 0; font-size: 26px; }
+.upload .ctrl { margin-top: 10px; font-size: 22px; letter-spacing: 1px; }
+.upload small {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+  font-family: "Segoe UI", sans-serif;
+  color: #a33;
+}
+.work {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.result {
+  border: 3px solid var(--line);
+  min-height: 220px;
+  padding: 14px;
+  overflow: auto;
+  max-height: 420px;
+}
+.result .status { font-family: "Segoe UI", sans-serif; font-size: 14px; margin-bottom: 10px; }
+.result .err { color: #9b1c1c; }
+.result .name { font-size: 18px; margin-bottom: 8px; }
+.result table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: #333;
+}
+.result th, .result td {
+  border: 1px solid #f0b3ad;
+  padding: 6px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+#fmt {
+  border: 3px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 20px;
+  padding: 10px 12px;
+  width: 100%;
+  outline: none;
+  cursor: pointer;
+}
+.go {
+  margin: 0;
+  border: 3px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 20px;
+  padding: 10px 16px;
+  cursor: pointer;
+  width: 100%;
+}
+.go:disabled { opacity: .45; cursor: not-allowed; }
+input[type=file] { display: none; }
+@media (max-width: 720px) {
+  .upload h2, .upload p { font-size: 22px; }
+  .actions { grid-template-columns: 1fr; }
+}
