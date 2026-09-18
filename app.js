@@ -10,6 +10,200 @@ let files = [];
 let lastTable = null;
 let lastFilename = "";
 
+/* ========== Custom Dropdown ========== */
+(function initCustomDropdown() {
+  const cdd = document.getElementById("fmtCdd");
+  const trigger = document.getElementById("fmtTrigger");
+  const panel = document.getElementById("fmtPanel");
+  const list = document.getElementById("fmtList");
+  const valueEl = document.getElementById("fmtValue");
+  if (!cdd || !trigger || !panel || !list) return;
+
+  const options = Array.from(list.querySelectorAll('[role="option"]'));
+  let activeIndex = options.findIndex((o) => o.getAttribute("aria-selected") === "true");
+  if (activeIndex < 0) activeIndex = 0;
+
+  function syncNative(value) {
+    if (fmt) {
+      fmt.value = value;
+      // keep selected attribute in sync for form consistency
+      Array.from(fmt.options).forEach((opt) => {
+        opt.selected = opt.value === value;
+      });
+    }
+  }
+
+  function setValue(optionEl, close) {
+    if (!optionEl) return;
+    const value = optionEl.getAttribute("data-value");
+    const label = optionEl.textContent.trim();
+    options.forEach((o) => {
+      o.setAttribute("aria-selected", o === optionEl ? "true" : "false");
+      o.classList.remove("cdd-highlight");
+    });
+    optionEl.setAttribute("aria-selected", "true");
+    valueEl.textContent = label;
+    syncNative(value);
+    activeIndex = options.indexOf(optionEl);
+    if (close !== false) closeDropdown();
+  }
+
+  function openDropdown() {
+    if (cdd.classList.contains("open")) return;
+    panel.hidden = false;
+    // force reflow so transition runs
+    void panel.offsetHeight;
+    cdd.classList.add("open");
+    trigger.setAttribute("aria-expanded", "true");
+    // highlight current selection
+    options.forEach((o, i) => {
+      o.classList.toggle("cdd-highlight", i === activeIndex);
+    });
+    // scroll selected into view
+    const selected = options[activeIndex];
+    if (selected) {
+      requestAnimationFrame(() => {
+        selected.scrollIntoView({ block: "nearest" });
+      });
+    }
+    // focus list for keyboard
+    list.focus({ preventScroll: true });
+  }
+
+  function closeDropdown() {
+    if (!cdd.classList.contains("open")) return;
+    cdd.classList.remove("open");
+    trigger.setAttribute("aria-expanded", "false");
+    // wait for transition then hide
+    setTimeout(() => {
+      if (!cdd.classList.contains("open")) panel.hidden = true;
+    }, 220);
+    options.forEach((o) => o.classList.remove("cdd-highlight"));
+  }
+
+  function toggleDropdown() {
+    if (cdd.classList.contains("open")) closeDropdown();
+    else openDropdown();
+  }
+
+  // Trigger click
+  trigger.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleDropdown();
+  });
+
+  // Option click (use pointerup for better mobile)
+  list.addEventListener("click", (e) => {
+    const opt = e.target.closest('[role="option"]');
+    if (opt) {
+      e.preventDefault();
+      e.stopPropagation();
+      setValue(opt);
+    }
+  });
+
+  // Keyboard on trigger
+  trigger.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (!cdd.classList.contains("open")) {
+        openDropdown();
+      } else if (e.key === "Enter" || e.key === " ") {
+        setValue(options[activeIndex]);
+      } else if (e.key === "ArrowDown") {
+        moveHighlight(1);
+      } else if (e.key === "ArrowUp") {
+        moveHighlight(-1);
+      }
+    } else if (e.key === "Escape") {
+      closeDropdown();
+    }
+  });
+
+  // Keyboard inside list
+  list.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveHighlight(1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveHighlight(-1);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      moveHighlight(0, true);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      moveHighlight(options.length - 1, true);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setValue(options[activeIndex]);
+    } else if (e.key === "Escape" || e.key === "Tab") {
+      closeDropdown();
+      if (e.key === "Escape") trigger.focus();
+    } else if (e.key.length === 1 && /[a-z0-9]/i.test(e.key)) {
+      // type-ahead
+      const ch = e.key.toLowerCase();
+      const start = activeIndex + 1;
+      let found = -1;
+      for (let i = 0; i < options.length; i++) {
+        const idx = (start + i) % options.length;
+        if (options[idx].textContent.trim().toLowerCase().startsWith(ch)) {
+          found = idx;
+          break;
+        }
+      }
+      if (found >= 0) {
+        e.preventDefault();
+        activeIndex = found;
+        options.forEach((o, i) => o.classList.toggle("cdd-highlight", i === activeIndex));
+        options[activeIndex].scrollIntoView({ block: "nearest" });
+      }
+    }
+  });
+
+  function moveHighlight(delta, absolute) {
+    if (absolute) {
+      activeIndex = delta;
+    } else {
+      activeIndex = (activeIndex + delta + options.length) % options.length;
+    }
+    options.forEach((o, i) => o.classList.toggle("cdd-highlight", i === activeIndex));
+    options[activeIndex].scrollIntoView({ block: "nearest" });
+  }
+
+  // Close on outside click / touch
+  document.addEventListener("pointerdown", (e) => {
+    if (cdd.classList.contains("open") && !cdd.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  // Close on Escape globally
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && cdd.classList.contains("open")) {
+      closeDropdown();
+      trigger.focus();
+    }
+  });
+
+  // Prevent scroll bleed on mobile when panel is open
+  panel.addEventListener("touchmove", (e) => {
+    // allow scroll inside list only
+    if (!list.contains(e.target) && e.target !== list) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Initial sync
+  const initial = options.find((o) => o.getAttribute("aria-selected") === "true") || options[0];
+  if (initial) {
+    valueEl.textContent = initial.textContent.trim();
+    syncNative(initial.getAttribute("data-value"));
+  }
+})();
+
+/* ========== File handling ========== */
 function setFiles(list, note) {
   const next = Array.from(list || []).filter(Boolean);
   if (!next.length) return;

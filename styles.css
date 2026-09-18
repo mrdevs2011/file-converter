@@ -193,6 +193,10 @@ body {
   gap: 12px;
   align-items: end;
 }
+.field {
+  position: relative;
+  min-width: 0; /* prevent overflow in grid */
+}
 .field label {
   display: block;
   font-size: 0.75rem;
@@ -202,26 +206,185 @@ body {
   letter-spacing: 0.04em;
   margin-bottom: 6px;
 }
-#fmt {
+
+/* ========== CUSTOM DROPDOWN (cdd) ========== */
+.cdd {
+  position: relative;
   width: 100%;
-  appearance: none;
-  -webkit-appearance: none;
+}
+
+.cdd-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   border: 1.5px solid var(--line);
-  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b6b6b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 14px center;
+  background: #fff;
   color: var(--ink);
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 500;
-  padding: 12px 40px 12px 14px;
+  padding: 12px 14px;
   border-radius: var(--radius-sm);
   outline: none;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 46px;
 }
-#fmt:hover { border-color: #ccc; }
-#fmt:focus {
+.cdd-trigger:hover {
+  border-color: #ccc;
+}
+.cdd-trigger:focus-visible,
+.cdd.open .cdd-trigger {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(226, 74, 59, 0.18);
+}
+.cdd-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cdd-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  transition: transform 0.25s var(--ease);
+}
+.cdd.open .cdd-chevron {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+/* Panel — absolute, never clips, works on all devices */
+.cdd-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 1000;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  max-height: min(320px, 55vh);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.98);
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), visibility 0.2s;
+  /* Prevent layout shift / overflow bugs */
+  overscroll-behavior: contain;
+}
+.cdd.open .cdd-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+.cdd-panel[hidden] {
+  display: none !important;
+}
+.cdd.open .cdd-panel[hidden] {
+  display: flex !important;
+}
+
+.cdd-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-mid) transparent;
+}
+.cdd-list::-webkit-scrollbar {
+  width: 6px;
+}
+.cdd-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cdd-list::-webkit-scrollbar-thumb {
+  background: var(--accent-mid);
+  border-radius: 3px;
+}
+
+.cdd-group {
+  list-style: none;
+}
+.cdd-group + .cdd-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.cdd-group-label {
+  display: block;
+  padding: 8px 14px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  pointer-events: none;
+  user-select: none;
+}
+.cdd-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cdd-list [role="option"] {
+  display: block;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+.cdd-list [role="option"]:hover,
+.cdd-list [role="option"].cdd-highlight {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.cdd-list [role="option"][aria-selected="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 650;
+}
+.cdd-list [role="option"][aria-selected="true"]::after {
+  content: "✓";
+  float: right;
+  margin-left: 8px;
+  font-weight: 700;
+}
+
+/* Mobile: panel opens upward if near bottom, but we keep simple bottom-open + max-height */
+@media (max-width: 640px) {
+  .cdd-panel {
+    max-height: min(280px, 50vh);
+  }
+  .cdd-list [role="option"] {
+    padding: 12px 14px; /* larger touch targets */
+    font-size: 0.95rem;
+  }
 }
 
 .go {

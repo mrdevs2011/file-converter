@@ -39,10 +39,69 @@
       <div class="work">
         <div class="actions">
           <div class="field">
-            <label for="fmt">Chiqish formati</label>
-                        <select id="fmt" aria-label="Output format">
+            <label id="fmtLabel">Chiqish formati</label>
+            <!-- Custom dropdown -->
+            <div class="cdd" id="fmtCdd">
+              <button type="button" class="cdd-trigger" id="fmtTrigger"
+                aria-haspopup="listbox" aria-expanded="false" aria-labelledby="fmtLabel fmtTrigger"
+                aria-controls="fmtList">
+                <span class="cdd-value" id="fmtValue">Excel — .xlsx</span>
+                <span class="cdd-chevron" aria-hidden="true">
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </button>
+              <div class="cdd-panel" id="fmtPanel" hidden>
+                <ul class="cdd-list" id="fmtList" role="listbox" aria-labelledby="fmtLabel" tabindex="-1">
+                  <li class="cdd-group" role="presentation">
+                    <span class="cdd-group-label">Jadval</span>
+                    <ul role="group" aria-label="Jadval">
+                      <li role="option" data-value="xlsx" aria-selected="true">Excel — .xlsx</li>
+                      <li role="option" data-value="xls" aria-selected="false">Excel 97-2003 — .xls</li>
+                      <li role="option" data-value="ods" aria-selected="false">ODS — .ods</li>
+                      <li role="option" data-value="fods" aria-selected="false">FODS — .fods</li>
+                      <li role="option" data-value="csv" aria-selected="false">CSV — .csv</li>
+                      <li role="option" data-value="tsv" aria-selected="false">TSV — .tsv</li>
+                      <li role="option" data-value="psv" aria-selected="false">PSV (|) — .psv</li>
+                      <li role="option" data-value="ssv" aria-selected="false">SSV (;) — .ssv</li>
+                      <li role="option" data-value="dbf" aria-selected="false">DBF — .dbf</li>
+                      <li role="option" data-value="dif" aria-selected="false">DIF — .dif</li>
+                      <li role="option" data-value="sylk" aria-selected="false">SYLK — .slk</li>
+                    </ul>
+                  </li>
+                  <li class="cdd-group" role="presentation">
+                    <span class="cdd-group-label">Ma'lumot</span>
+                    <ul role="group" aria-label="Ma'lumot">
+                      <li role="option" data-value="json" aria-selected="false">JSON — .json</li>
+                      <li role="option" data-value="jsonl" aria-selected="false">JSONL — .jsonl</li>
+                      <li role="option" data-value="yaml" aria-selected="false">YAML — .yaml</li>
+                      <li role="option" data-value="toml" aria-selected="false">TOML — .toml</li>
+                      <li role="option" data-value="xml" aria-selected="false">XML — .xml</li>
+                      <li role="option" data-value="ini" aria-selected="false">INI — .ini</li>
+                      <li role="option" data-value="env" aria-selected="false">ENV — .env</li>
+                      <li role="option" data-value="sql" aria-selected="false">SQL — .sql</li>
+                    </ul>
+                  </li>
+                  <li class="cdd-group" role="presentation">
+                    <span class="cdd-group-label">Hujjat / boshqa</span>
+                    <ul role="group" aria-label="Hujjat / boshqa">
+                      <li role="option" data-value="html" aria-selected="false">HTML — .html</li>
+                      <li role="option" data-value="md" aria-selected="false">Markdown — .md</li>
+                      <li role="option" data-value="latex" aria-selected="false">LaTeX — .tex</li>
+                      <li role="option" data-value="org" aria-selected="false">Org-mode — .org</li>
+                      <li role="option" data-value="wiki" aria-selected="false">MediaWiki — .wiki</li>
+                      <li role="option" data-value="rtf" aria-selected="false">RTF — .rtf</li>
+                      <li role="option" data-value="vcf" aria-selected="false">vCard — .vcf</li>
+                      <li role="option" data-value="ics" aria-selected="false">iCalendar — .ics</li>
+                      <li role="option" data-value="log" aria-selected="false">LOG — .log</li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <!-- Hidden native select (value storage + fallback) -->
+            <select id="fmt" class="sr-only" tabindex="-1" aria-hidden="true">
               <optgroup label="Jadval">
-                <option value="xlsx">Excel — .xlsx</option>
+                <option value="xlsx" selected>Excel — .xlsx</option>
                 <option value="xls">Excel 97-2003 — .xls</option>
                 <option value="ods">ODS — .ods</option>
                 <option value="fods">FODS — .fods</option>
