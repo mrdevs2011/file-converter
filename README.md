@@ -8,24 +8,33 @@ Sof HTML / CSS / JS. Python kerak emas. Offline ishlaydi.
 
 1. Faylni tashlang, tanlang yoki **Ctrl+V** qiling.
 2. Chiqish formatini tanlang.
-3. **Convert** bosing — fayl yuklanadi va preview chiqadi.
-4. **Full screen** bilan jadvalni to‘liq ekranda oching (Esc / ✕).
+3. **Convert** — yuklab olish + preview.
+4. **Full screen** — to‘liq jadval (Esc / ✕).
 
-## Oqiydi
+## Oqiydi (kirish)
 
-JSON, JSONL, Excel (xlsx/xls/xlsm/xlsb), ODS, CSV, TSV, TXT, YAML, XML, HTML jadval, Markdown jadval.
+| Format | Ext |
+|--------|-----|
+| JSON / JSONL | `.json` `.jsonl` `.ndjson` |
+| Excel / ODS | `.xlsx` `.xls` `.xlsm` `.xlsb` `.ods` |
+| CSV / TSV / TXT | `.csv` `.tsv` `.txt` |
+| YAML | `.yaml` `.yml` |
+| XML | `.xml` |
+| HTML jadval | `.html` `.htm` |
+| Markdown jadval | `.md` `.markdown` |
+| **TOML** | `.toml` |
+| **INI / conf** | `.ini` `.conf` `.cfg` `.properties` |
+| **SQL INSERT** | `.sql` |
+| **LOG** | `.log` |
 
-## Yozadi
+## Yozadi (chiqish)
 
-Excel, ODS, CSV, TSV, JSON, JSONL, YAML, XML, HTML, Markdown.
+Excel, ODS, CSV, TSV, JSON, JSONL, YAML, XML, HTML, Markdown, **TOML**, **INI**, **SQL**, **LOG**.
 
 Bir nechta fayl birga merge bo‘ladi.
-Kutubxonalar `vendor/` ichida.
 
 ## Test
 
 ```bash
 node tests/run_tests.js
 ```
-
-Barcha formatlar (132 test) o‘tgan.

@@ -7,7 +7,9 @@
     xlsx: "xlsx", xls: "xlsx", xlsm: "xlsx", xlsb: "xlsx", ods: "xlsx",
     yaml: "yaml", yml: "yaml",
     xml: "xml", html: "html", htm: "html",
-    md: "md", markdown: "md"
+    md: "md", markdown: "md",
+    toml: "toml", ini: "ini", conf: "ini", cfg: "ini", properties: "ini",
+    sql: "sql", log: "log"
   };
 
   function extOf(name) {
@@ -245,6 +247,206 @@
     return recs;
   }
 
+
+  function parseToml(text) {
+    var lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/);
+    var recs = [];
+    var current = {};
+    var inArrayTable = false;
+    function flush() {
+      if (Object.keys(current).length) {
+        recs.push(current);
+        current = {};
+      }
+    }
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].replace(/#.*$/, "").trim();
+      if (!line) continue;
+      var arrTable = line.match(/^\[\[([^\]]+)\]\]$/);
+      var table = line.match(/^\[([^\]]+)\]$/);
+      if (arrTable) {
+        flush();
+        inArrayTable = true;
+        current = { _section: arrTable[1].trim() };
+        continue;
+      }
+      if (table) {
+        flush();
+        inArrayTable = false;
+        current = { _section: table[1].trim() };
+        continue;
+      }
+      var kv = line.match(/^([A-Za-z0-9_.-]+)\s*=\s*(.*)$/);
+      if (!kv) continue;
+      var key = kv[1];
+      var raw = kv[2].trim();
+      var val = raw;
+      if ((raw.charAt(0) === '"' && raw.charAt(raw.length - 1) === '"') ||
+          (raw.charAt(0) === "'" && raw.charAt(raw.length - 1) === "'")) {
+        val = raw.slice(1, -1);
+      } else if (/^(true|false)$/i.test(raw)) {
+        val = raw.toLowerCase() === "true";
+      } else if (/^-?\d+(\.\d+)?$/.test(raw)) {
+        val = Number(raw);
+      } else if (raw.charAt(0) === "[" && raw.charAt(raw.length - 1) === "]") {
+        val = raw.slice(1, -1).split(",").map(function (x) { return x.trim().replace(/^["']|["']$/g, ""); }).join(", ");
+      }
+      current[key] = val;
+    }
+    flush();
+    if (!recs.length) throw new Error("TOML o'qilmadi");
+    return recs;
+  }
+
+  function parseIni(text) {
+    var lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/);
+    var recs = [];
+    var section = "default";
+    var current = { section: section };
+    function flush() {
+      if (Object.keys(current).length > 1 || (Object.keys(current).length === 1 && current.section !== "default")) {
+        recs.push(current);
+      }
+      current = { section: section };
+    }
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].replace(/[;#].*$/, "").trim();
+      if (!line) continue;
+      var sec = line.match(/^\[([^\]]+)\]$/);
+      if (sec) {
+        flush();
+        section = sec[1].trim();
+        current = { section: section };
+        continue;
+      }
+      var kv = line.match(/^([^=]+?)\s*=\s*(.*)$/);
+      if (kv) current[kv[1].trim()] = kv[2].trim();
+    }
+    flush();
+    if (!recs.length) {
+      // flat key=value without sections
+      var flat = {};
+      String(text).split(/\r?\n/).forEach(function (l) {
+        var m = l.replace(/[;#].*$/, "").match(/^([^=]+?)\s*=\s*(.*)$/);
+        if (m) flat[m[1].trim()] = m[2].trim();
+      });
+      if (Object.keys(flat).length) return [flat];
+      throw new Error("INI o'qilmadi");
+    }
+    return recs;
+  }
+
+  function parseSql(text) {
+    var recs = [];
+    var re = /INSERT\s+INTO\s+[`"\[]?(\w+)[`"\]]?\s*(?:\(([^)]+)\))?\s*VALUES\s*\(([^;]+)\)/gi;
+    var m;
+    while ((m = re.exec(text))) {
+      var table = m[1];
+      var cols = m[2] ? m[2].split(",").map(function (c) { return c.trim().replace(/^[`"\[]|[`"\]]$/g, ""); }) : null;
+      var valsRaw = m[3];
+      var vals = [];
+      var cur = "";
+      var inQ = null;
+      for (var i = 0; i < valsRaw.length; i++) {
+        var ch = valsRaw.charAt(i);
+        if (inQ) {
+          if (ch === inQ && valsRaw.charAt(i - 1) !== "\\") inQ = null;
+          cur += ch;
+        } else if (ch === "'" || ch === '"') {
+          inQ = ch;
+          cur += ch;
+        } else if (ch === ",") {
+          vals.push(cur.trim());
+          cur = "";
+        } else cur += ch;
+      }
+      if (cur.trim()) vals.push(cur.trim());
+      var rec = { _table: table };
+      vals.forEach(function (v, idx) {
+        var key = cols && cols[idx] ? cols[idx] : "col_" + (idx + 1);
+        v = v.trim();
+        if ((v.charAt(0) === "'" && v.charAt(v.length - 1) === "'") ||
+            (v.charAt(0) === '"' && v.charAt(v.length - 1) === '"')) {
+          v = v.slice(1, -1).replace(/''/g, "'");
+        } else if (/^null$/i.test(v)) v = "";
+        rec[key] = v;
+      });
+      recs.push(rec);
+    }
+    if (!recs.length) throw new Error("SQL INSERT topilmadi");
+    return recs;
+  }
+
+  function parseLog(text) {
+    var lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).filter(function (l) { return l.trim(); });
+    return lines.map(function (line, i) {
+      var rec = { line: i + 1, text: line };
+      var ts = line.match(/^(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/);
+      if (ts) rec.timestamp = ts[1];
+      var lvl = line.match(/\b(ERROR|WARN|WARNING|INFO|DEBUG|TRACE|FATAL|CRITICAL)\b/i);
+      if (lvl) rec.level = lvl[1].toUpperCase();
+      return rec;
+    });
+  }
+
+  function toToml(table) {
+    var recs = recordsPlain(table);
+    if (!recs.length) return "";
+    var out = [];
+    recs.forEach(function (r, idx) {
+      out.push("[[row]]");
+      table.columns.forEach(function (c) {
+        var v = r[c];
+        if (v === null || v === undefined || v === "") {
+          out.push(c + ' = ""');
+          return;
+        }
+        if (typeof v === "number" || typeof v === "boolean") out.push(c + " = " + v);
+        else out.push(c + ' = "' + String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"');
+      });
+      if (idx < recs.length - 1) out.push("");
+    });
+    return out.join("\n") + "\n";
+  }
+
+  function toIni(table) {
+    var recs = recordsPlain(table);
+    var out = [];
+    recs.forEach(function (r, idx) {
+      out.push("[row_" + (idx + 1) + "]");
+      table.columns.forEach(function (c) {
+        out.push(c + " = " + asText(r[c]));
+      });
+      out.push("");
+    });
+    return out.join("\n");
+  }
+
+  function toSql(table) {
+    var cols = table.columns.map(function (c) {
+      return "`" + String(c).replace(/`/g, "") + "`";
+    });
+    var lines = ["-- Generated by File Converter", "CREATE TABLE IF NOT EXISTS data ("];
+    lines.push(table.columns.map(function (c) {
+      return "  `" + String(c).replace(/`/g, "") + "` TEXT";
+    }).join(",\n"));
+    lines.push(");", "");
+    recordsPlain(table).forEach(function (r) {
+      var vals = table.columns.map(function (c) {
+        var v = asText(r[c]);
+        return "'" + v.replace(/'/g, "''") + "'";
+      });
+      lines.push("INSERT INTO data (" + cols.join(", ") + ") VALUES (" + vals.join(", ") + ");");
+    });
+    return lines.join("\n") + "\n";
+  }
+
+  function toLog(table) {
+    return table.rows.map(function (r) {
+      return r.map(asText).join(" | ");
+    }).join("\n") + "\n";
+  }
+
   function sniffKind(name, text, isBinary) {
     var ext = extOf(name);
     if (READ_EXT[ext]) return READ_EXT[ext];
@@ -256,6 +458,9 @@
       if (/<html/i.test(s) || /<table/i.test(s)) return "html";
       return "xml";
     }
+    if (/^INSERT\s+INTO\b/i.test(s) || /^CREATE\s+TABLE\b/i.test(s)) return "sql";
+    if (/^\[\[[^\]]+\]\]/.test(s) || (/^[A-Za-z0-9_.-]+\s*=/.test(s) && /\n\[/.test(s))) return "toml";
+    if (/^\[[^\]]+\]\s*$/m.test(s) && /^[^=\n]+=/m.test(s)) return "ini";
     if (/^---\s*\n/.test(s) || /^[\w.-]+:\s+/m.test(s)) return "yaml";
     if (s.indexOf("\t") !== -1) return "tsv";
     return "csv";
@@ -283,6 +488,10 @@
     }
     if (kind === "tsv") return parseCsv(text, "\t");
     if (kind === "csv" || kind === "txt") return parseCsv(text);
+    if (kind === "toml") return parseToml(text);
+    if (kind === "ini") return parseIni(text);
+    if (kind === "sql") return parseSql(text);
+    if (kind === "log") return parseLog(text);
     throw new Error("Bu format ochilmaydi: " + kind);
   }
 
@@ -425,6 +634,18 @@
     } else if (fmt === "md") {
       data = toMd(table);
       mime = "text/markdown;charset=utf-8";
+    } else if (fmt === "toml") {
+      data = toToml(table);
+      mime = "application/toml;charset=utf-8";
+    } else if (fmt === "ini") {
+      data = toIni(table);
+      mime = "text/plain;charset=utf-8";
+    } else if (fmt === "sql") {
+      data = toSql(table);
+      mime = "application/sql;charset=utf-8";
+    } else if (fmt === "log") {
+      data = toLog(table);
+      mime = "text/plain;charset=utf-8";
     } else {
       throw new Error("Chiqish formati yo'q: " + fmt);
     }

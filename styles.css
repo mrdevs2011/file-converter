@@ -54,14 +54,10 @@ body {
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent), #c0392b);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-  font-weight: 600;
   box-shadow: 0 4px 14px rgba(226, 74, 59, 0.35);
   flex-shrink: 0;
+  display: block;
+  object-fit: cover;
 }
 .logo h1 {
   font-size: 1.35rem;
@@ -523,7 +519,7 @@ input[type=file] { display: none; }
 @media (max-width: 640px) {
   .page { padding: 16px 12px 24px; gap: 14px; }
   .frame { padding: 18px 14px; gap: 18px; border-radius: 14px; }
-  .logo-mark { width: 42px; height: 42px; font-size: 18px; border-radius: 12px; }
+  .logo-mark { width: 42px; height: 42px; border-radius: 12px; }
   .logo h1 { font-size: 1.15rem; }
   .upload { min-height: 150px; padding: 22px 14px; }
   .upload h2 { font-size: 1.05rem; }
