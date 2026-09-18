@@ -16,7 +16,7 @@
         <img class="logo-mark" src="favicon.svg" width="48" height="48" alt="">
         <div>
           <h1>File Converter</h1>
-          <p class="tag">JSON · Excel · CSV · YAML · XML · TOML · SQL · INI · Markdown</p>
+          <p class="tag">30+ format · Excel · JSON · CSV · SQL · vCard · LaTeX…</p>
         </div>
       </div>
     </header>
@@ -34,27 +34,47 @@
         <div class="chips" id="fileChips"></div>
         <small id="fileName" class="sr-only"></small>
       </div>
-      <input id="file" type="file" multiple accept=".json,.jsonl,.ndjson,.csv,.tsv,.txt,.xlsx,.xls,.xlsm,.xlsb,.ods,.yaml,.yml,.xml,.html,.htm,.md,.markdown,.toml,.ini,.conf,.cfg,.properties,.sql,.log">
+      <input id="file" type="file" multiple accept=".json,.jsonc,.jsonl,.ndjson,.csv,.tsv,.txt,.psv,.ssv,.scsv,.xlsx,.xls,.xlsm,.xlsb,.ods,.fods,.dbf,.yaml,.yml,.xml,.html,.htm,.md,.markdown,.toml,.ini,.conf,.cfg,.properties,.env,.sql,.log,.tex,.latex,.org,.vcf,.vcard,.ics,.ical,.rss,.atom,.wiki,.dif,.slk,.sylk,.rtf">
 
       <div class="work">
         <div class="actions">
           <div class="field">
             <label for="fmt">Chiqish formati</label>
-            <select id="fmt" aria-label="Output format">
-              <option value="xlsx">Excel — .xlsx</option>
-              <option value="ods">ODS — .ods</option>
-              <option value="csv">CSV — .csv</option>
-              <option value="tsv">TSV — .tsv</option>
-              <option value="json">JSON — .json</option>
-              <option value="jsonl">JSONL — .jsonl</option>
-              <option value="yaml">YAML — .yaml</option>
-              <option value="xml">XML — .xml</option>
-              <option value="html">HTML — .html</option>
-              <option value="md">Markdown — .md</option>
-              <option value="toml">TOML — .toml</option>
-              <option value="ini">INI — .ini</option>
-              <option value="sql">SQL — .sql</option>
-              <option value="log">LOG — .log</option>
+                        <select id="fmt" aria-label="Output format">
+              <optgroup label="Jadval">
+                <option value="xlsx">Excel — .xlsx</option>
+                <option value="xls">Excel 97-2003 — .xls</option>
+                <option value="ods">ODS — .ods</option>
+                <option value="fods">FODS — .fods</option>
+                <option value="csv">CSV — .csv</option>
+                <option value="tsv">TSV — .tsv</option>
+                <option value="psv">PSV (|) — .psv</option>
+                <option value="ssv">SSV (;) — .ssv</option>
+                <option value="dbf">DBF — .dbf</option>
+                <option value="dif">DIF — .dif</option>
+                <option value="sylk">SYLK — .slk</option>
+              </optgroup>
+              <optgroup label="Ma'lumot">
+                <option value="json">JSON — .json</option>
+                <option value="jsonl">JSONL — .jsonl</option>
+                <option value="yaml">YAML — .yaml</option>
+                <option value="toml">TOML — .toml</option>
+                <option value="xml">XML — .xml</option>
+                <option value="ini">INI — .ini</option>
+                <option value="env">ENV — .env</option>
+                <option value="sql">SQL — .sql</option>
+              </optgroup>
+              <optgroup label="Hujjat / boshqa">
+                <option value="html">HTML — .html</option>
+                <option value="md">Markdown — .md</option>
+                <option value="latex">LaTeX — .tex</option>
+                <option value="org">Org-mode — .org</option>
+                <option value="wiki">MediaWiki — .wiki</option>
+                <option value="rtf">RTF — .rtf</option>
+                <option value="vcf">vCard — .vcf</option>
+                <option value="ics">iCalendar — .ics</option>
+                <option value="log">LOG — .log</option>
+              </optgroup>
             </select>
           </div>
           <button class="go" id="go" disabled>

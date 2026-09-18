@@ -2,14 +2,25 @@
   "use strict";
 
   var READ_EXT = {
-    json: "json", jsonl: "jsonl", ndjson: "jsonl",
-    csv: "csv", tsv: "tsv", txt: "txt",
+    json: "json", jsonc: "json", json5: "json",
+    jsonl: "jsonl", ndjson: "jsonl",
+    csv: "csv", tsv: "tsv", txt: "txt", psv: "psv",
+    ssv: "ssv", scsv: "ssv",
     xlsx: "xlsx", xls: "xlsx", xlsm: "xlsx", xlsb: "xlsx", ods: "xlsx",
+    fods: "xlsx", uos: "xlsx", et: "xlsx", numbers: "xlsx",
+    dbf: "xlsx", prn: "xlsx",
     yaml: "yaml", yml: "yaml",
     xml: "xml", html: "html", htm: "html",
     md: "md", markdown: "md",
-    toml: "toml", ini: "ini", conf: "ini", cfg: "ini", properties: "ini",
-    sql: "sql", log: "log"
+    toml: "toml", ini: "ini", conf: "ini", cfg: "ini", properties: "ini", env: "env",
+    sql: "sql", log: "log",
+    tex: "latex", latex: "latex",
+    org: "org",
+    vcf: "vcf", vcard: "vcf",
+    ics: "ics", ical: "ics", icalendar: "ics",
+    rss: "rss", atom: "rss",
+    wiki: "wiki", mediawiki: "wiki",
+    dif: "dif", slk: "sylk", sylk: "sylk"
   };
 
   function extOf(name) {
@@ -447,6 +458,371 @@
     }).join("\n") + "\n";
   }
 
+
+  function stripJsonComments(text) {
+    return String(text).replace(/^\uFEFF/, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+  }
+
+  function parsePsv(text) {
+    return parseCsv(text, "|");
+  }
+
+  function parseSsv(text) {
+    return parseCsv(text, ";");
+  }
+
+  function parseEnv(text) {
+    var rec = {};
+    String(text).split(/\r?\n/).forEach(function (line) {
+      line = line.replace(/^\uFEFF/, "").trim();
+      if (!line || line.charAt(0) === "#") return;
+      var eq = line.indexOf("=");
+      if (eq === -1) return;
+      var k = line.slice(0, eq).trim();
+      var v = line.slice(eq + 1).trim();
+      if ((v.charAt(0) === '"' && v.charAt(v.length - 1) === '"') ||
+          (v.charAt(0) === "'" && v.charAt(v.length - 1) === "'")) v = v.slice(1, -1);
+      rec[k] = v;
+    });
+    if (!Object.keys(rec).length) throw new Error("ENV o'qilmadi");
+    return [rec];
+  }
+
+  function parseLatex(text) {
+    var m = String(text).match(/\\begin\{tabular\}[\s\S]*?\\end\{tabular\}/);
+    if (!m) throw new Error("LaTeX tabular topilmadi");
+    var body = m[0]
+      .replace(/\\begin\{tabular\}\{[^}]*\}/, "")
+      .replace(/\\end\{tabular\}/, "")
+      .replace(/\\hline/g, "")
+      .trim();
+    var rows = body.split(/\\\\/).map(function (r) { return r.trim(); }).filter(Boolean);
+    if (rows.length < 1) return [];
+    function cells(row) {
+      return row.split("&").map(function (c) {
+        return c.replace(/\\textbf\{([^}]*)\}/g, "$1").replace(/[{}]/g, "").trim();
+      });
+    }
+    var header = cells(rows[0]);
+    var recs = [];
+    for (var i = 1; i < rows.length; i++) {
+      var vals = cells(rows[i]);
+      var rec = {};
+      header.forEach(function (h, idx) { rec[h || ("col_" + (idx + 1))] = vals[idx] || ""; });
+      recs.push(rec);
+    }
+    return recs;
+  }
+
+  function parseOrg(text) {
+    var lines = String(text).split(/\r?\n/).filter(function (l) { return /^\s*\|/.test(l); });
+    if (lines.length < 2) throw new Error("Org jadval topilmadi");
+    function splitRow(line) {
+      return line.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map(function (s) { return s.trim(); });
+    }
+    var header = splitRow(lines[0]);
+    var start = 1;
+    if (/^[\s|+-]+$/.test(lines[1].replace(/[^\s|+-]/g, ""))) start = 2;
+    var recs = [];
+    for (var i = start; i < lines.length; i++) {
+      if (/^[\s|+-]+$/.test(lines[i].replace(/[^\s|+-]/g, ""))) continue;
+      var vals = splitRow(lines[i]);
+      var rec = {};
+      header.forEach(function (h, idx) { rec[h || ("col_" + (idx + 1))] = vals[idx] || ""; });
+      recs.push(rec);
+    }
+    return recs;
+  }
+
+  function parseVcf(text) {
+    var cards = String(text).split(/BEGIN:VCARD/i).slice(1);
+    if (!cards.length) throw new Error("vCard topilmadi");
+    return cards.map(function (block) {
+      var rec = {};
+      block.split(/\r?\n/).forEach(function (line) {
+        line = line.trim();
+        if (!line || /^END:VCARD/i.test(line)) return;
+        var idx = line.indexOf(":");
+        if (idx === -1) return;
+        var key = line.slice(0, idx).split(";")[0].toUpperCase();
+        var val = line.slice(idx + 1).trim();
+        if (key === "FN") rec.name = val;
+        else if (key === "N") rec.structured_name = val;
+        else if (key === "TEL") rec.phone = (rec.phone ? rec.phone + "; " : "") + val;
+        else if (key === "EMAIL") rec.email = (rec.email ? rec.email + "; " : "") + val;
+        else if (key === "ORG") rec.org = val;
+        else if (key === "TITLE") rec.title = val;
+        else if (key === "URL") rec.url = val;
+        else if (key === "ADR") rec.address = val.replace(/;/g, ", ");
+        else if (key === "NOTE") rec.note = val;
+        else if (key === "BDAY") rec.birthday = val;
+      });
+      return rec;
+    }).filter(function (r) { return Object.keys(r).length; });
+  }
+
+  function parseIcs(text) {
+    var events = String(text).split(/BEGIN:VEVENT/i).slice(1);
+    if (!events.length) throw new Error("iCal event topilmadi");
+    return events.map(function (block) {
+      var rec = {};
+      var lines = block.replace(/\r?\n[ \t]/g, "").split(/\r?\n/);
+      lines.forEach(function (line) {
+        line = line.trim();
+        if (!line || /^END:VEVENT/i.test(line)) return;
+        var idx = line.indexOf(":");
+        if (idx === -1) return;
+        var key = line.slice(0, idx).split(";")[0].toUpperCase();
+        var val = line.slice(idx + 1).trim();
+        if (key === "SUMMARY") rec.summary = val;
+        else if (key === "DTSTART") rec.start = val;
+        else if (key === "DTEND") rec.end = val;
+        else if (key === "LOCATION") rec.location = val;
+        else if (key === "DESCRIPTION") rec.description = val;
+        else if (key === "UID") rec.uid = val;
+        else if (key === "STATUS") rec.status = val;
+        else if (key === "ORGANIZER") rec.organizer = val.replace(/^MAILTO:/i, "");
+      });
+      return rec;
+    }).filter(function (r) { return Object.keys(r).length; });
+  }
+
+  function parseRss(text) {
+    var doc = new DOMParser().parseFromString(text, "text/xml");
+    var err = doc.querySelector("parsererror");
+    if (err) throw new Error("RSS/Atom o'qilmadi");
+    var items = doc.querySelectorAll("item, entry");
+    var recs = [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      function txt(sel) {
+        var n = it.querySelector(sel);
+        return n ? (n.textContent || "").trim() : "";
+      }
+      var linkNode = it.querySelector("link");
+      var link = txt("link");
+      if (!link && linkNode) link = linkNode.getAttribute("href") || "";
+      recs.push({
+        title: txt("title"),
+        link: link,
+        date: txt("pubDate") || txt("updated") || txt("published"),
+        author: txt("author") || txt("creator"),
+        description: (txt("description") || txt("summary") || "").slice(0, 500)
+      });
+    }
+    if (!recs.length) throw new Error("RSS item topilmadi");
+    return recs;
+  }
+
+  function parseWiki(text) {
+    var lines = String(text).split(/\r?\n/).filter(function (l) {
+      return /^\s*\|/.test(l) || /^\s*!/.test(l);
+    });
+    if (lines.length < 2) throw new Error("Wiki jadval topilmadi");
+    function cells(line) {
+      return line.replace(/^\s*[|!]/, "").split("|").map(function (c) {
+        return c.replace(/'{2,3}/g, "").replace(/\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2").trim();
+      });
+    }
+    var header = cells(lines[0]);
+    var recs = [];
+    for (var i = 1; i < lines.length; i++) {
+      if (/^\s*\|-/.test(lines[i])) continue;
+      var vals = cells(lines[i]);
+      if (!vals.length) continue;
+      var rec = {};
+      header.forEach(function (h, idx) { rec[h || ("col_" + (idx + 1))] = vals[idx] || ""; });
+      recs.push(rec);
+    }
+    return recs;
+  }
+
+  function parseDif(text) {
+    var lines = String(text).split(/\r?\n/);
+    var rows = [];
+    var current = [];
+    var inData = false;
+    for (var i = 0; i < lines.length; i++) {
+      var L = lines[i].trim();
+      if (L === "DATA" || L === "BOT") { inData = true; continue; }
+      if (L === "EOD") break;
+      if (!inData) continue;
+      if (L === "-1,0" && (lines[i + 1] || "").trim() === "BOT") {
+        if (current.length) rows.push(current);
+        current = [];
+        i++;
+        continue;
+      }
+      if (/^0,/.test(L) || /^1,/.test(L)) {
+        var next = (lines[i + 1] || "").trim();
+        if (next.charAt(0) === '"' && next.charAt(next.length - 1) === '"') {
+          current.push(next.slice(1, -1));
+          i++;
+        } else if (next) {
+          current.push(next.replace(/^V/, ""));
+          i++;
+        }
+      }
+    }
+    if (current.length) rows.push(current);
+    if (rows.length < 2) throw new Error("DIF o'qilmadi");
+    var header = rows[0].map(function (h, i) { return h || ("col_" + (i + 1)); });
+    return rows.slice(1).map(function (r) {
+      var rec = {};
+      header.forEach(function (h, idx) { rec[h] = r[idx] || ""; });
+      return rec;
+    });
+  }
+
+  function parseSylk(text) {
+    var lines = String(text).split(/\r?\n/);
+    var grid = {};
+    var maxR = 0, maxC = 0;
+    lines.forEach(function (line) {
+      var m = line.match(/^C;X(\d+);Y(\d+);.*K(.+)$/);
+      if (!m) return;
+      var c = parseInt(m[1], 10), r = parseInt(m[2], 10);
+      var val = m[3].trim();
+      if (val.charAt(0) === '"' && val.charAt(val.length - 1) === '"') val = val.slice(1, -1);
+      grid[r + "," + c] = val;
+      if (r > maxR) maxR = r;
+      if (c > maxC) maxC = c;
+    });
+    if (maxR < 1) throw new Error("SYLK o'qilmadi");
+    var header = [];
+    for (var c = 1; c <= maxC; c++) header.push(grid["1," + c] || ("col_" + c));
+    var recs = [];
+    for (var r = 2; r <= maxR; r++) {
+      var rec = {};
+      for (var c = 1; c <= maxC; c++) rec[header[c - 1]] = grid[r + "," + c] || "";
+      recs.push(rec);
+    }
+    return recs;
+  }
+
+  function toPsv(table) {
+    return Papa.unparse({ fields: table.columns, data: table.rows }, { delimiter: "|" });
+  }
+
+  function toSsv(table) {
+    return Papa.unparse({ fields: table.columns, data: table.rows }, { delimiter: ";" });
+  }
+
+  function toEnv(table) {
+    var recs = recordsPlain(table);
+    if (recs.length === 1) {
+      return Object.keys(recs[0]).map(function (k) {
+        return k + "=" + asText(recs[0][k]);
+      }).join("\n") + "\n";
+    }
+    return recs.map(function (r, i) {
+      return Object.keys(r).map(function (k) {
+        return k + "_" + (i + 1) + "=" + asText(r[k]);
+      }).join("\n");
+    }).join("\n\n") + "\n";
+  }
+
+  function toLatex(table) {
+    var cols = table.columns.map(function () { return "l"; }).join("");
+    var lines = ["\\begin{tabular}{" + cols + "}", "\\hline"];
+    lines.push(table.columns.map(function (c) { return String(c).replace(/([&#%_])/g, "\\$1"); }).join(" & ") + " \\\\");
+    lines.push("\\hline");
+    table.rows.forEach(function (r) {
+      lines.push(r.map(function (v) { return asText(v).replace(/([&#%_])/g, "\\$1"); }).join(" & ") + " \\\\");
+    });
+    lines.push("\\hline", "\\end{tabular}");
+    return lines.join("\n") + "\n";
+  }
+
+  function toOrg(table) {
+    var head = "| " + table.columns.join(" | ") + " |";
+    var sep = "| " + table.columns.map(function () { return "---"; }).join(" | ") + " |";
+    var body = table.rows.map(function (r) {
+      return "| " + r.map(function (v) { return asText(v).replace(/\|/g, "\\|"); }).join(" | ") + " |";
+    }).join("\n");
+    return head + "\n" + sep + "\n" + body + "\n";
+  }
+
+  function toVcf(table) {
+    return recordsPlain(table).map(function (r) {
+      var lines = ["BEGIN:VCARD", "VERSION:3.0"];
+      var name = r.name || r.ism || r.FN || r.full_name || Object.values(r)[0] || "";
+      lines.push("FN:" + asText(name));
+      if (r.phone || r.tel || r.telefon) lines.push("TEL:" + asText(r.phone || r.tel || r.telefon));
+      if (r.email || r.mail) lines.push("EMAIL:" + asText(r.email || r.mail));
+      if (r.org || r.company) lines.push("ORG:" + asText(r.org || r.company));
+      if (r.title || r.lavozim) lines.push("TITLE:" + asText(r.title || r.lavozim));
+      if (r.url) lines.push("URL:" + asText(r.url));
+      if (r.address || r.adr) lines.push("ADR:" + asText(r.address || r.adr));
+      if (r.note || r.izoh) lines.push("NOTE:" + asText(r.note || r.izoh));
+      lines.push("END:VCARD");
+      return lines.join("\n");
+    }).join("\n") + "\n";
+  }
+
+  function toIcs(table) {
+    var lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//File Converter//EN"];
+    recordsPlain(table).forEach(function (r, i) {
+      lines.push("BEGIN:VEVENT");
+      lines.push("UID:fc-" + (i + 1) + "@file-converter");
+      lines.push("SUMMARY:" + asText(r.summary || r.title || r.name || r.ism || ("Event " + (i + 1))));
+      if (r.start || r.dtstart || r.begin) lines.push("DTSTART:" + asText(r.start || r.dtstart || r.begin));
+      if (r.end || r.dtend) lines.push("DTEND:" + asText(r.end || r.dtend));
+      if (r.location || r.joy) lines.push("LOCATION:" + asText(r.location || r.joy));
+      if (r.description || r.desc || r.izoh) lines.push("DESCRIPTION:" + asText(r.description || r.desc || r.izoh));
+      lines.push("END:VEVENT");
+    });
+    lines.push("END:VCALENDAR");
+    return lines.join("\n") + "\n";
+  }
+
+  function toWiki(table) {
+    var lines = ['{| class="wikitable"', "|-"];
+    lines.push("! " + table.columns.join(" !! "));
+    table.rows.forEach(function (r) {
+      lines.push("|-");
+      lines.push("| " + r.map(function (v) { return asText(v); }).join(" || "));
+    });
+    lines.push("|}");
+    return lines.join("\n") + "\n";
+  }
+
+  function toDif(table) {
+    var lines = ["TABLE", "0,1", '"DATA"', "VECTORS", "0," + (table.rows.length + 1), '""', "TUPLES", "0," + table.columns.length, '""', "DATA", "0,0", '""'];
+    function bot() { lines.push("-1,0", "BOT"); }
+    function cell(v) {
+      var t = asText(v);
+      if (/^-?\d+(\.\d+)?$/.test(t)) { lines.push("0," + t); lines.push("V"); }
+      else { lines.push("1,0"); lines.push('"' + t.replace(/"/g, "'") + '"'); }
+    }
+    bot();
+    table.columns.forEach(cell);
+    table.rows.forEach(function (r) {
+      bot();
+      r.forEach(cell);
+    });
+    lines.push("-1,0", "EOD");
+    return lines.join("\n") + "\n";
+  }
+
+  function toSylk(table) {
+    var lines = ["ID;PFileConverter", "B;Y" + (table.rows.length + 1) + ";X" + table.columns.length + ";D0"];
+    table.columns.forEach(function (c, i) {
+      lines.push("C;X" + (i + 1) + ";Y1;K\"" + String(c).replace(/"/g, "'") + "\"");
+    });
+    table.rows.forEach(function (r, ri) {
+      r.forEach(function (v, ci) {
+        var t = asText(v);
+        if (/^-?\d+(\.\d+)?$/.test(t)) lines.push("C;X" + (ci + 1) + ";Y" + (ri + 2) + ";K" + t);
+        else lines.push("C;X" + (ci + 1) + ";Y" + (ri + 2) + ";K\"" + t.replace(/"/g, "'") + "\"");
+      });
+    });
+    lines.push("E");
+    return lines.join("\n") + "\n";
+  }
+
   function sniffKind(name, text, isBinary) {
     var ext = extOf(name);
     if (READ_EXT[ext]) return READ_EXT[ext];
@@ -468,7 +844,7 @@
 
   function parseByKind(kind, text, buf) {
     if (kind === "xlsx") return parseWorkbook(buf);
-    if (kind === "json" || kind === "jsonl") return parseJsonFlexible(text);
+    if (kind === "json" || kind === "jsonl") return parseJsonFlexible(kind === "json" ? stripJsonComments(text) : text);
     if (kind === "yaml") return recordsFrom(jsyaml.load(text));
     if (kind === "xml") {
       var xml = new DOMParser().parseFromString(text, "text/xml");
@@ -492,13 +868,24 @@
     if (kind === "ini") return parseIni(text);
     if (kind === "sql") return parseSql(text);
     if (kind === "log") return parseLog(text);
+    if (kind === "psv") return parsePsv(text);
+    if (kind === "ssv") return parseSsv(text);
+    if (kind === "env") return parseEnv(text);
+    if (kind === "latex") return parseLatex(text);
+    if (kind === "org") return parseOrg(text);
+    if (kind === "vcf") return parseVcf(text);
+    if (kind === "ics") return parseIcs(text);
+    if (kind === "rss") return parseRss(text);
+    if (kind === "wiki") return parseWiki(text);
+    if (kind === "dif") return parseDif(text);
+    if (kind === "sylk") return parseSylk(text);
     throw new Error("Bu format ochilmaydi: " + kind);
   }
 
   function readFile(file) {
     return new Promise(function (resolve, reject) {
       var ext = extOf(file.name);
-      var binary = /^(xlsx|xls|xlsm|xlsb|ods)$/.test(ext);
+      var binary = /^(xlsx|xls|xlsm|xlsb|ods|fods|uos|et|dbf|prn|numbers)$/.test(ext);
       var reader = new FileReader();
       reader.onerror = function () { reject(new Error("Fayl o'qilmadi")); };
       reader.onload = function () {
@@ -592,7 +979,7 @@
     var nameExt = fmt;
     var mime = "application/octet-stream";
     var data;
-    if (fmt === "xlsx" || fmt === "ods") {
+    if (fmt === "xlsx" || fmt === "ods" || fmt === "xls" || fmt === "fods" || fmt === "dbf" || fmt === "rtf") {
       var wb = XLSX.utils.book_new();
       var ws = XLSX.utils.aoa_to_sheet(aoaFrom(table));
       ws["!cols"] = table.columns.map(function (c) {
@@ -604,11 +991,22 @@
         return { wch: Math.min(42, Math.max(12, max + 2)) };
       });
       XLSX.utils.book_append_sheet(wb, ws, "Data");
-      var bookType = fmt === "ods" ? "ods" : "xlsx";
+      var bookMap = { xlsx: "xlsx", ods: "ods", xls: "xls", fods: "fods", dbf: "dbf", rtf: "rtf" };
+      var bookType = bookMap[fmt] || "xlsx";
       data = XLSX.write(wb, { bookType: bookType, type: "array" });
-      mime = fmt === "ods"
-        ? "application/vnd.oasis.opendocument.spreadsheet"
-        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      var mimeMap = {
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ods: "application/vnd.oasis.opendocument.spreadsheet",
+        xls: "application/vnd.ms-excel",
+        fods: "application/vnd.oasis.opendocument.spreadsheet",
+        dbf: "application/x-dbf",
+        rtf: "application/rtf"
+      };
+      mime = mimeMap[fmt] || mimeMap.xlsx;
+      if (fmt === "xls") nameExt = "xls";
+      if (fmt === "dbf") nameExt = "dbf";
+      if (fmt === "rtf") nameExt = "rtf";
+      if (fmt === "fods") nameExt = "fods";
     } else if (fmt === "csv") {
       data = Papa.unparse({ fields: table.columns, data: table.rows });
       if (data.charCodeAt(0) !== 65279) data = "\ufeff" + data;
@@ -645,6 +1043,39 @@
       mime = "application/sql;charset=utf-8";
     } else if (fmt === "log") {
       data = toLog(table);
+      mime = "text/plain;charset=utf-8";
+    } else if (fmt === "psv") {
+      data = toPsv(table);
+      mime = "text/plain;charset=utf-8";
+    } else if (fmt === "ssv") {
+      data = toSsv(table);
+      if (data.charCodeAt(0) !== 65279) data = "\ufeff" + data;
+      mime = "text/csv;charset=utf-8";
+    } else if (fmt === "env") {
+      data = toEnv(table);
+      mime = "text/plain;charset=utf-8";
+    } else if (fmt === "latex" || fmt === "tex") {
+      data = toLatex(table);
+      nameExt = "tex";
+      mime = "application/x-tex;charset=utf-8";
+    } else if (fmt === "org") {
+      data = toOrg(table);
+      mime = "text/plain;charset=utf-8";
+    } else if (fmt === "vcf") {
+      data = toVcf(table);
+      mime = "text/vcard;charset=utf-8";
+    } else if (fmt === "ics") {
+      data = toIcs(table);
+      mime = "text/calendar;charset=utf-8";
+    } else if (fmt === "wiki") {
+      data = toWiki(table);
+      mime = "text/plain;charset=utf-8";
+    } else if (fmt === "dif") {
+      data = toDif(table);
+      mime = "application/x-dif;charset=utf-8";
+    } else if (fmt === "sylk" || fmt === "slk") {
+      data = toSylk(table);
+      nameExt = "slk";
       mime = "text/plain;charset=utf-8";
     } else {
       throw new Error("Chiqish formati yo'q: " + fmt);
